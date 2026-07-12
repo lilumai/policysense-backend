@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PolicySense — เข้าใจพอร์ตประกันใน 1 ขั้นตอน</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0E2A33; --deep:#12262C; --teal:#0F6E56; --tealDark:#0C5A47;
+    --tealSoft:#5DCAA5; --mint:#E1F5EE; --bg:#F6F8F7; --card:#FFFFFF;
+    --border:#E2EAE7; --sub:#5F7470; --faint:#9AACA7;
+    --amber:#854F0B; --amberBg:#FAEEDA; --amberBorder:#EF9F27;
+    --red:#A32D2D; --redBg:#FCEBEB; --redBorder:#E24B4A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--deep);
+    font-family:'IBM Plex Sans Thai','Noto Sans Thai',sans-serif;font-size:15px;line-height:1.5}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  input{font-family:inherit}
+  .hidden{display:none !important}
+  .wrap{max-width:960px;margin:0 auto;padding:0 16px}
+  /* top nav */
+  header.nav{position:sticky;top:0;z-index:10;background:var(--card);border-bottom:1px solid var(--border)}
+  .nav-inner{max-width:960px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .brand{font-weight:600;color:var(--ink)}
+  .tabs{display:flex;gap:4px}
+  .tab{padding:6px 12px;border-radius:8px;font-size:14px;color:var(--sub);background:transparent}
+  .tab.active{background:var(--mint);color:var(--teal);font-weight:600}
+  .tab:disabled{color:var(--faint);cursor:not-allowed}
+  .tab .badge{margin-left:6px;font-size:12px;padding:1px 7px;border-radius:999px;background:var(--amberBg);color:var(--amber)}
+  .email{font-size:12px;color:var(--sub)}
+  /* buttons */
+  .btn-primary{width:100%;padding:12px;border-radius:12px;background:var(--teal);color:#fff;font-weight:500;font-size:15px}
+  .btn-primary:hover{background:var(--tealDark)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px}
+  .muted{color:var(--sub)}
+  .faint{color:var(--faint)}
+  h1{font-size:26px;font-weight:600;color:var(--deep);margin:0}
+  /* login */
+  .login{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:var(--ink)}
+  @media(max-width:820px){.login{grid-template-columns:1fr}.login-left{display:none}}
+  .login-left{display:flex;flex-direction:column;justify-content:space-between;padding:56px;color:#E9F2EF}
+  .login-right{display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px;border-radius:0}
+  @media(min-width:821px){.login-right{border-top-left-radius:40px;border-bottom-left-radius:40px}}
+  .pill{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid #2E4A46;color:#6E8B84;display:inline-block}
+  .field{display:block;margin-bottom:16px}
+  .field span{display:block;font-size:14px;font-weight:500;color:var(--sub);margin-bottom:6px}
+  .field input{width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);font-size:15px}
+  .field input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,110,86,.15)}
+  /* dropzone */
+  .drop{margin-top:32px;border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;background:var(--card)}
+  .drop:hover{border-color:var(--teal)}
+  .drop.over{border-color:var(--teal);background:var(--mint)}
+  .filerow{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-top:8px;font-size:14px}
+  /* steps */
+  .step{display:flex;align-items:center;gap:12px;padding:8px 0}
+  .step .dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:#EEF3F1;color:var(--faint)}
+  .step.done .dot{background:var(--teal);color:#fff}
+  .step.active .dot{background:var(--mint);color:var(--teal)}
+  /* dashboard cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:24px}
+  .cov{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;text-align:left;width:100%;display:flex;flex-direction:column;align-items:center}
+  .cov:hover{box-shadow:0 4px 14px rgba(0,0,0,.06)}
+  .cov-top{width:100%;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .cov-ico{width:36px;height:36px;border-radius:12px;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .bdg{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .cov-open{width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--sub);line-height:1.6}
+  /* chat */
+  .msg{display:flex;margin-bottom:12px}
+  .msg.user{justify-content:flex-end}
+  .bub{max-width:82%;border-radius:16px;padding:12px 16px;font-size:14px;line-height:1.6;white-space:pre-wrap}
+  .bub.user{background:var(--teal);color:#fff}
+  .bub.ai{background:var(--card);border:1px solid var(--border)}
+  .qbtn{text-align:left;width:100%;font-size:14px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);color:var(--teal);background:var(--card);margin-bottom:8px}
+  .qbtn:hover{background:var(--mint)}
+  .chip{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--sub);background:var(--card)}
+  .decide{padding:8px 14px;border-radius:12px;font-size:13px;font-weight:500}
+  /* tier badge (NEW — explainability: regulatory-backed vs heuristic) */
+  .tierbdg{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;display:inline-block}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ============================================================
+// CONFIG — application tier location
+// ============================================================
+const BACKEND_URL = ""; // ว่างไว้ = relative path — ใช้ได้เพราะ FastAPI เสิร์ฟหน้านี้เอง (ดู main.py)
+                         // ถ้าแยก deploy frontend/backend คนละที่ในอนาคต ค่อยใส่ URL เต็มกลับมา
+
+// ============================================================
+// State (in-memory; หายเมื่อรีเฟรช — เหมือน prototype เดิม)
+// ============================================================
+const state = {
+  screen: "login",       // login | upload | dashboard | chat
+  user: null,
+  analyzed: false,
+  analysis: null,        // ผลจริงจาก backend /analyze — {results:[...]}
+  analysisError: null,   // ข้อความ error ถ้าเรียก backend ไม่สำเร็จ
+  profile: { annual_income: 800000, dependents: 2 },  // ส่งให้ backend คำนวณ target
+  decisions: [],         // {id, decision_type, context, outcome, outcome_detail}
+  chat: [],              // {role, content}
+  files: [],
+  uploadPhase: "idle",   // idle | running | done | calling_backend
+  uploadStep: 0,
+  chatLoading: false,
+};
+
+// ---------- Mock policy documents (persona: ซื้อเอง + พ่อแม่ + บัตร) ----------
+// ใช้แสดงผล "ดูรายกรมธรรม์" — ไม่ส่งให้ backend ตรงๆ (ดู ENGINE_POLICIES ด้านล่าง)
+const POLICIES = [
+  { id:"p1", insurer:"AIA", name:"AIA Health Happy", type:"สุขภาพ", source:"ซื้อเอง", premium:28500,
+    items:[["ค่าห้อง/ค่าอาหาร (IPD)","4,000 บ./คืน สูงสุด 90 คืน"],["ค่าผ่าตัดและหัตถการ","150,000 บ./ครั้ง"],["ค่ารักษาผู้ป่วยใน (IPD)","60,000 บ./ครั้ง"]] },
+  { id:"p2", insurer:"เมืองไทยประกันภัย", name:"PA Plus", type:"อุบัติเหตุ", source:"พ่อแม่ซื้อให้", premium:6900,
+    items:[["ค่ารักษาจากอุบัติเหตุ","30,000 บ./ครั้ง"],["เสียชีวิตจากอุบัติเหตุ","1,000,000 บ."]] },
+  { id:"p3", insurer:"ประกันกลุ่ม KTC", name:"แถมจากบัตรเครดิต", type:"อุบัติเหตุ", source:"แถมจากบัตร", premium:0,
+    items:[["ค่ารักษาจากอุบัติเหตุ","20,000 บ./ครั้ง"],["เสียชีวิตจากอุบัติเหตุ","500,000 บ."]] },
+];
+
+// ---------- Structured input for the RULE ENGINE (backend) ----------
+// หนึ่งกรมธรรม์จริงอาจแตกเป็นหลาย "category" สำหรับ rule engine
+// (เช่น PA Plus มีทั้งส่วนอุบัติเหตุ (pa) และเสียชีวิต (life))
+// ตัวเลขตรงนี้อ้างอิงจาก POLICIES ด้านบน — ถ้าแก้ POLICIES ต้องแก้ตรงนี้ตามด้วย
+const ENGINE_POLICIES = [
+  { id:"p1-ipd",  insurer:"AIA",                  category:"ipd",  sum_insured:210000,  annual_premium:28500 },
+  { id:"p2-pa",   insurer:"เมืองไทยประกันภัย",     category:"pa",   sum_insured:30000,   annual_premium:6900 },
+  { id:"p2-life", insurer:"เมืองไทยประกันภัย",     category:"life", sum_insured:1000000, annual_premium:0 },
+  { id:"p3-pa",   insurer:"ประกันกลุ่ม KTC",       category:"pa",   sum_insured:20000,   annual_premium:0 },
+  { id:"p3-life", insurer:"ประกันกลุ่ม KTC",       category:"life", sum_insured:500000,  annual_premium:0 },
+];
+
+// ---------- Category display metadata (presentation-layer only) ----------
+const CATEGORY_META = {
+  life: { icon:"☂️", name:"ทุนประกันชีวิต",        sub:"เสียชีวิต/ทุพพลภาพถาวร" },
+  ipd:  { icon:"🏥", name:"ผู้ป่วยใน (IPD)",        sub:"ค่ารักษา + ผ่าตัด/ครั้ง" },
+  ci:   { icon:"🎗️", name:"โรคร้ายแรง (CI)",       sub:"เงินก้อนเมื่อตรวจพบ" },
+  pa:   { icon:"🩹", name:"อุบัติเหตุ (PA)",        sub:"ค่ารักษาจากอุบัติเหตุ/ครั้ง" },
+};
+const STATUS_META = {
+  gap:     { bg:"var(--redBg)",   color:"var(--red)",   label:"ยังขาด" },
+  overlap: { bg:"var(--amberBg)", color:"var(--amber)", label:"ซ้ำซ้อน" },
+  ok:      { bg:"var(--mint)",    color:"var(--teal)",  label:"ครบแล้ว" },
+};
+
+const QUICK = [
+  "ขับมอเตอร์ไซค์ล้ม ค่ารักษา 8,000 บาท เบิกฉบับไหนก่อน?",
+  "รายได้สุทธิ 800,000 มีประกันชีวิต 40,000 เหลือสิทธิ์ลดหย่อนภาษีอีกเท่าไหร่?",
+  "อายุ 35 อยากเกษียณตอน 60 มีเงินออม 500,000 ออมปีละ 60,000 พอไหม?",
+  "อยากเก็บค่าเรียนลูก 2 ล้านใน 12 ปี ต้องออมเดือนละเท่าไหร่?",
+];
+const DISCLAIMER = "⚠️ คำตอบนี้เป็นการประเมินจากข้อมูลกรมธรรม์ที่วิเคราะห์ไว้ ไม่ใช่การยืนยันสิทธิ์อย่างเป็นทางการจากบริษัทประกัน";
+const AI_STEPS = ["อ่านเอกสารทุกไฟล์ (OCR)","สกัดความคุ้มครองรายบรรทัด","เทียบทั้งพอร์ต — หาซ้ำซ้อนและช่องโหว่"];
+const DEMO_FILES = ["AIA_HealthHappy_กรมธรรม์.pdf","LINE_พ่อส่งมา_เมืองไทยPA.jpg","KTC_ประกันกลุ่ม_อีเมล.pdf"];
+
+// ---------- helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const el = id => document.getElementById(id);
+
+// ============================================================
+// Render
+// ============================================================
+function render(){
+  const app = el("app");
+  if(state.screen==="login"){ app.innerHTML = loginHTML(); bindLogin(); return; }
+  app.innerHTML = navHTML() +
+    (state.screen==="upload" ? uploadHTML()
+     : state.screen==="dashboard" ? dashboardHTML()
+     : chatHTML());
+  bindNav();
+  if(state.screen==="upload") bindUpload();
+  if(state.screen==="dashboard") bindDashboard();
+  if(state.screen==="chat") bindChat();
+}
+
+// ---------- Login ----------
+function loginHTML(){
+  return `<div class="login">
+    <div class="login-left">
+      <div class="brand">PolicySense</div>
+      <div>
+        <div style="font-size:34px;font-weight:600;line-height:1.35">หยุดรื้อเอกสาร<br>แล้วมา<span style="color:var(--tealSoft)">ตัดสินใจ</span>แทน</div>
+        <p style="margin-top:20px;max-width:26rem;color:#9FBDB4;line-height:1.7">อัปโหลดกรมธรรม์ทุกฉบับครั้งเดียว — AI สรุปพอร์ต บอกว่าอะไรซ้ำ อะไรขาด และเคสตรงหน้าเบิกได้ไหม โดยไม่ต้องเปิดอ่านสักหน้า</p>
+        <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="pill">Fewer steps</span><span class="pill">Owner flips</span><span class="pill">Outcome feeds back</span>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#6E8B84">เป็นกลาง ไม่ขายประกัน ไม่มีค่าคอมมิชชั่น</p>
+    </div>
+    <div class="login-right">
+      <div style="width:100%;max-width:22rem">
+        <h1>เข้าสู่ระบบ</h1>
+        <p class="muted" style="font-size:14px;margin:4px 0 24px">โหมดสาธิต — กดเข้าสู่ระบบได้เลย ไม่ต้องแก้อะไร</p>
+        <label class="field"><span>อีเมล</span><input id="in-email" value="demo@policysense.app"></label>
+        <label class="field"><span>รหัสผ่าน</span><input id="in-pass" type="password" value="demo1234"></label>
+        <button class="btn-primary" id="btn-login">เข้าสู่ระบบ</button>
+      </div>
+    </div>
+  </div>`;
+}
+function bindLogin(){
+  el("btn-login").onclick = () => {
+    state.user = { email: el("in-email").value || "demo@policysense.app" };
+    state.screen = "upload"; render();
+  };
+}
+
+// ---------- Nav ----------
+function navHTML(){
+  const pend = state.decisions.filter(d=>d.outcome==="pending").length;
+  const tab = (key,label,enabled,badge) =>
+    `<button class="tab ${state.screen===key?'active':''}" data-tab="${key}" ${enabled?'':'disabled'}>${label}${badge?`<span class="badge">${badge}</span>`:''}</button>`;
+  return `<header class="nav"><div class="nav-inner">
+    <span class="brand">PolicySense</span>
+    <nav class="tabs">
+      ${tab("upload","1 · อัปโหลด",true,0)}
+      ${tab("dashboard","2 · แดชบอร์ดพอร์ต",state.analyzed, state.screen!=="dashboard"?pend:0)}
+      ${tab("chat","3 · ถามผู้ช่วย AI",state.analyzed,0)}
+    </nav>
+    <span class="email">${esc(state.user?.email||"")}</span>
+  </div></header>`;
+}
+function bindNav(){
+  document.querySelectorAll("[data-tab]").forEach(b=>{
+    if(b.disabled) return;
+    b.onclick = () => { state.screen = b.dataset.tab; render(); };
+  });
+}
+
+// ---------- Upload ----------
+function uploadHTML(){
+  let body;
+  if(state.uploadPhase==="idle"){
+    const errorBanner = state.analysisError ? `
+      <div class="card" style="margin-bottom:16px;padding:16px;border-color:var(--redBorder);background:var(--redBg)">
+        <p style="color:var(--red);font-weight:500;margin:0">เชื่อมต่อ Backend ไม่สำเร็จ</p>
+        <p style="font-size:13px;margin:4px 0 0;color:var(--red)">${esc(state.analysisError)}</p>
+        <p style="font-size:12px;margin:8px 0 0;color:var(--sub)">ตรวจสอบว่า uvicorn รันอยู่ที่ ${esc(BACKEND_URL)} (เปิด terminal แล้วพิมพ์ <code>uvicorn main:app --reload --port 8000</code>)</p>
+      </div>` : "";
+    body = `
+      ${errorBanner}
+      <div class="card" style="padding:16px;margin-bottom:16px">
+        <p style="font-weight:500;font-size:14px;margin:0 0 12px">ข้อมูลเบื้องต้น (ใช้คำนวณเป้าหมายความคุ้มครองที่เหมาะกับคุณ)</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label class="field" style="margin-bottom:0"><span>รายได้ต่อปี (บาท)</span><input id="in-income" type="number" value="${state.profile.annual_income}"></label>
+          <label class="field" style="margin-bottom:0"><span>ผู้อยู่ในอุปการะ (คน)</span><input id="in-dependents" type="number" value="${state.profile.dependents}"></label>
+        </div>
+      </div>
+      <div class="drop" id="drop">
+        <p style="font-weight:500">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</p>
+        <p class="muted" style="font-size:14px;margin:4px 0 0">รองรับ PDF, JPG, PNG · หลายไฟล์พร้อมกัน</p>
+        <input id="file-input" type="file" multiple accept="application/pdf,image/*" class="hidden">
+      </div>
+      <button id="btn-demo" style="margin-top:12px;font-size:14px;color:var(--teal);text-decoration:underline">หรือใช้ไฟล์ตัวอย่าง 3 ฉบับ (โหมดสาธิต)</button>
+      <div id="filelist">${state.files.map((f,i)=>`<div class="filerow"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f)}</span><button data-rm="${i}" style="font-size:12px;color:var(--sub)">ลบ</button></div>`).join("")}</div>
+      <button class="btn-primary" id="btn-analyze" style="margin-top:32px;padding:16px;font-size:17px" ${state.files.length?'':'disabled'}>ให้ AI วิเคราะห์ทั้งพอร์ต →</button>`;
+  } else if(state.uploadPhase==="calling_backend"){
+    body = `<div class="card" style="margin-top:32px;padding:24px">
+      <div class="step active"><span class="dot">⏳</span><span style="color:var(--deep)">กำลังคำนวณช่องว่างความคุ้มครองจาก Backend จริง…</span></div>
+    </div>`;
+  } else {
+    body = `<div class="card" style="margin-top:32px;padding:24px">
+      ${AI_STEPS.map((label,i)=>{
+        const done = i<state.uploadStep || state.uploadPhase==="done";
+        const active = i===state.uploadStep && state.uploadPhase==="running";
+        return `<div class="step ${done?'done':active?'active':''}"><span class="dot">${done?'✓':i+1}</span><span style="color:${done||active?'var(--deep)':'var(--faint)'}">${label}</span>${active?'<span style="font-size:12px;color:var(--teal)">กำลังทำงาน…</span>':''}</div>`;
+      }).join("")}
+      ${state.uploadPhase==="done"?'<p style="margin-top:12px;font-size:14px;font-weight:500;color:var(--teal)">วิเคราะห์ 3 ฉบับเสร็จแล้ว — กำลังคำนวณกับ Backend…</p>':''}
+    </div>`;
+  }
+  return `<div class="wrap" style="padding-top:40px;padding-bottom:40px;max-width:680px">
+    <p style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)">ขั้นตอนเดียวที่คุณต้องทำ</p>
+    <h1 style="font-size:30px;margin-top:4px">อัปโหลดกรมธรรม์ทุกฉบับที่มี</h1>
+    <p class="muted" style="margin-top:8px;line-height:1.7">PDF จากอีเมล หรือรูปที่เซฟจาก LINE ก็ได้ — เมื่อกดปุ่มเดียว AI จะทำงานที่คุณเคยต้องทำเอง 3 อย่างแทนทั้งหมด</p>
+    ${body}
+  </div>`;
+}
+function bindUpload(){
+  if(state.uploadPhase!=="idle") return;
+  const incomeInput = el("in-income"), depInput = el("in-dependents");
+  if(incomeInput) incomeInput.oninput = () => { state.profile.annual_income = +incomeInput.value || 0; };
+  if(depInput) depInput.oninput = () => { state.profile.dependents = +depInput.value || 0; };
+
+  const drop = el("drop"), input = el("file-input");
+  drop.onclick = () => input.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files].map(f=>f.name)); };
+  input.onchange = e => addFiles([...e.target.files].map(f=>f.name));
+  el("btn-demo").onclick = () => { state.files = [...DEMO_FILES]; render(); };
+  document.querySelectorAll("[data-rm]").forEach(b=> b.onclick = () => { state.files.splice(+b.dataset.rm,1); render(); });
+  const analyze = el("btn-analyze");
+  if(analyze) analyze.onclick = runAnalyze;
+}
+function addFiles(names){ state.files.push(...names); render(); }
+
+// ---------- Backend call (real — replaces the old broken direct-to-Anthropic fetch) ----------
+async function callBackendAnalyze(){
+  let res;
+  try{
+    res = await fetch(`${BACKEND_URL}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        profile: {
+          annual_income: state.profile.annual_income,
+          dependents: state.profile.dependents,
+        },
+        policies: ENGINE_POLICIES.map(p => ({
+          id: p.id, insurer: p.insurer, category: p.category,
+          sum_insured: p.sum_insured, annual_premium: p.annual_premium,
+        })),
+        explain: false,  // LLM layer ยังไม่ต่อ — ขอแค่ตัวเลขจาก rule engine
+      }),
+    });
+  }catch(networkErr){
+    throw new Error(`เชื่อมต่อ ${BACKEND_URL} ไม่ได้ (network error) — เช็คว่า uvicorn รันอยู่หรือยัง`);
+  }
+  if(!res.ok){
+    throw new Error(`Backend ตอบกลับผิดพลาด (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+function runAnalyze(){
+  state.uploadPhase = "running"; state.uploadStep = 0; state.analysisError = null; render();
+  const t = setInterval(()=>{
+    state.uploadStep++;
+    if(state.uploadStep >= AI_STEPS.length){
+      clearInterval(t);
+      state.uploadPhase = "done"; render();
+      setTimeout(async ()=>{
+        state.uploadPhase = "calling_backend"; render();
+        try{
+          const result = await callBackendAnalyze();
+          state.analysis = result.analysis;   // {results:[...]}
+          state.analyzed = true;
+          state.screen = "dashboard";
+          state.uploadPhase = "idle";
+        }catch(err){
+          state.analysisError = err.message;
+          state.uploadPhase = "idle";
+        }
+        render();
+      }, 900);
+    } else render();
+  }, 1400);
+}
+
+// ---------- Dashboard ----------
+function ring(pct){
+  const size=88, stroke=9, r=(size-stroke)/2, circ=2*Math.PI*r;
+  const color = pct===0 ? "#D9E2DF" : pct>=80 ? "var(--teal)" : "#EF9F27";
+  return `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#E7EEEB" stroke-width="${stroke}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${pct/100*circ} ${circ}" stroke-linecap="round" transform="rotate(-90 ${size/2} ${size/2})"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="600" fill="var(--deep)">${pct}%</text></svg>`;
+}
+function tierBadge(tier){
+  return tier==="regulatory_backed"
+    ? `<span class="tierbdg" style="background:var(--mint);color:var(--teal)">📘 อ้างอิงทางการ</span>`
+    : `<span class="tierbdg" style="background:#EEF0EE;color:var(--sub)">⚙️ ค่าเริ่มต้น (heuristic)</span>`;
+}
+function contributorsFor(ids){
+  return (ids||[]).map(id=>{
+    const p = ENGINE_POLICIES.find(e=>e.id===id);
+    return p ? `${p.insurer} · ${p.sum_insured.toLocaleString()} บ.` : id;
+  });
+}
+function dashboardHTML(){
+  if(!state.analysis || !state.analysis.results){
+    return `<div class="wrap" style="padding-top:32px"><p class="muted">ยังไม่มีผลวิเคราะห์ — กรุณากลับไปอัปโหลดใหม่</p></div>`;
+  }
+  const results = state.analysis.results;
+  const total = POLICIES.reduce((s,p)=>s+p.premium,0);
+  const gapsCount = results.filter(r=>r.status==="gap").length;
+  const dupsCount = results.filter(r=>r.status==="overlap").length;
+
+  const cards = results.map(r=>{
+    const meta = CATEGORY_META[r.category] || { icon:"📄", name:r.category, sub:"" };
+    const b = STATUS_META[r.status] || STATUS_META.ok;
+    const pct = r.current==null ? 0 : Math.round(Math.min(r.current/r.target, 1) * 100);
+    const open = state._open===r.category;
+    const contributors = contributorsFor(r.policies);
+    return `<button class="cov" data-cov="${r.category}" style="border-color:${open?'var(--tealSoft)':'var(--border)'}">
+      <div class="cov-top">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <span class="cov-ico">${meta.icon}</span>
+          <div style="min-width:0"><div style="font-weight:600;line-height:1.2">${meta.name}</div><div class="faint" style="font-size:12px">${meta.sub}</div></div>
+        </div>
+        <span class="bdg" style="background:${b.bg};color:${b.color}">${b.label}</span>
+      </div>
+      <div style="margin:12px 0">${ring(pct)}</div>
+      <div style="font-size:20px;font-weight:600">${r.current?r.current.toLocaleString():"—"}</div>
+      <div class="faint" style="font-size:12px">เป้าหมายแนะนำ ${r.target.toLocaleString()} บ.</div>
+      <div style="margin-top:8px">${tierBadge(r.tier)}</div>
+      ${open?`<div class="cov-open">${contributors.length?`<ul style="margin:0 0 6px;padding-left:18px">${contributors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`:`<p style="margin:0 0 6px">ยังไม่มีกรมธรรม์ในหมวดนี้</p>`}<p style="margin:0">${esc(r.source)}</p></div>`:""}
+      <div style="font-size:12px;margin-top:8px;font-weight:500;color:var(--teal)">${open?"ซ่อนรายละเอียด ▴":"มาจากฉบับไหน? ▾"}</div>
+    </button>`;
+  }).join("");
+
+  const decisionRows = state.decisions.map(d=>decisionRowHTML(d)).join("");
+  return `<div class="wrap" style="padding-top:32px;padding-bottom:40px">
+    <h1>ภาพรวมความคุ้มครองของคุณ</h1>
+    <p class="muted" style="font-size:14px;margin-top:4px">AI อ่านครบ 3 ฉบับ (เบี้ยรวม ${total.toLocaleString()} บ./ปี) — พบ <span style="color:var(--amber);font-weight:600">${dupsCount} หมวดซ้ำซ้อน</span> · <span style="color:var(--red);font-weight:600">${gapsCount} หมวดยังขาด</span></p>
+    <div class="grid">${cards}</div>
+    <p class="faint" style="font-size:12px;margin-top:16px;line-height:1.6">% คือความพอเพียงเทียบกับเป้าหมายที่คำนวณจาก backend (ดูป้าย 📘/⚙️ ว่าตัวเลขอ้างอิงทางการหรือค่าเริ่มต้น) · ผลประโยชน์จริงเป็นไปตามข้อกำหนดและเงื่อนไขของกรมธรรม์ · แตะการ์ดเพื่อดูที่มา</p>
+
+    <details style="margin-top:24px" class="card">
+      <summary style="padding:12px 16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--teal)">ดูรายกรมธรรม์ทั้ง 3 ฉบับ</summary>
+      <div class="grid" style="margin:0;padding:4px 16px 16px">
+        ${POLICIES.map(p=>`<div class="card" style="padding:16px">
+          <div style="display:flex;justify-content:space-between"><span class="bdg" style="background:var(--mint);color:var(--teal)">${p.type}</span><span class="faint" style="font-size:12px">${p.source}</span></div>
+          <p style="font-weight:600;margin:8px 0 0">${p.insurer}</p><p class="muted" style="font-size:14px;margin:0">${p.name}</p>
+          <ul style="margin:12px 0 0;padding:0;list-style:none">${p.items.map(it=>`<li style="font-size:12px;display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span class="muted">${it[0]}</span><span style="font-weight:500;text-align:right;white-space:nowrap">${it[1]}</span></li>`).join("")}</ul>
+          <p class="faint" style="font-size:12px;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--border)">เบี้ย ${p.premium===0?"ฟรี":p.premium.toLocaleString()+" บ./ปี"}</p>
+        </div>`).join("")}
+      </div>
+    </details>
+
+    <div style="border-radius:16px;padding:20px;margin-top:24px;background:var(--ink);color:#E9F2EF">
+      <p style="font-weight:600;margin:0">พร้อมตัดสินใจแล้ว? คุณคือคนเลือก — ไม่ใช่คนหาเอกสารอีกต่อไป</p>
+      <p style="font-size:14px;margin:4px 0 0;color:#9FBDB4">ทุกการตัดสินใจจะถูกบันทึกไว้ และเมื่อรู้ผลจริง ระบบจะเรียนรู้เพื่อแนะนำแม่นขึ้น</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">
+        <button class="decide" data-dec="claim" style="background:var(--teal);color:#fff">🏥 ยื่นเคลม</button>
+        <button class="decide" data-dec="buy_more" style="background:var(--teal);color:#fff">➕ ซื้อเพิ่มปิดหมวดที่ยังขาด</button>
+        <button class="decide" data-goto="chat" style="border:1px solid #2E4A46;color:#E9F2EF;background:transparent">💬 ถามผู้ช่วย AI ก่อน</button>
+      </div>
+    </div>
+
+    ${state.decisions.length?`<h2 style="font-size:18px;font-weight:600;margin-top:32px">↻ Feedback loop — บันทึกผลจริงเพื่อให้ระบบเรียนรู้</h2><div id="declist" style="margin-top:12px">${decisionRows}</div>`:""}
+  </div>`;
+}
+const OUTCOMES = [["approved","เคลมผ่านเต็มจำนวน"],["partially","ผ่านบางส่วน"],["rejected","ถูกปฏิเสธ"],["purchased","ซื้อแล้ว"]];
+const decTypeLabel = t => ({claim:"ยื่นเคลม",buy_more:"ซื้อเพิ่ม",no_action:"ยังไม่ทำ"}[t]);
+function decisionRowHTML(d){
+  return `<div class="card" style="padding:16px;margin-bottom:12px">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px">
+      <div><p style="font-weight:500;margin:0">${decTypeLabel(d.decision_type)} <span class="muted" style="font-weight:400;font-size:14px">— ${esc(d.context)}</span></p>
+      ${d.outcome!=="pending"?`<p style="font-size:14px;margin:4px 0 0;color:var(--teal)">✓ ผลลัพธ์: ${OUTCOMES.find(o=>o[0]===d.outcome)[1]} — ป้อนกลับเข้า AI แล้ว</p>`:""}</div>
+      ${d.outcome==="pending"?`<div style="display:flex;flex-wrap:wrap;gap:6px">${OUTCOMES.map(o=>`<button class="chip" data-out="${d.id}" data-val="${o[0]}">${o[1]}</button>`).join("")}</div>`:""}
+    </div>
+  </div>`;
+}
+function bindDashboard(){
+  document.querySelectorAll("[data-cov]").forEach(b=> b.onclick = () => { state._open = state._open===b.dataset.cov?null:b.dataset.cov; render(); });
+  document.querySelectorAll("[data-dec]").forEach(b=> b.onclick = () => { addDecision(b.dataset.dec, b.dataset.dec==="claim"?"ยื่นเคลมจากหน้าพอร์ต":"ซื้อเพิ่มปิดช่องโหว่"); render(); });
+  document.querySelectorAll("[data-goto]").forEach(b=> b.onclick = () => { state.screen = b.dataset.goto; render(); });
+  document.querySelectorAll("[data-out]").forEach(b=> b.onclick = () => { recordOutcome(+b.dataset.out, b.dataset.val); render(); });
+}
+function addDecision(type, ctx){ state.decisions.push({id:Date.now()+Math.random(), decision_type:type, context:ctx, outcome:"pending", outcome_detail:null}); }
+function recordOutcome(id, outcome){ const d=state.decisions.find(x=>x.id===id); if(d) d.outcome=outcome; }
+
+// ---------- Chat ----------
+// หมายเหตุ: ยังเป็นโหมดสาธิต (mock) ล้วน — ตัดการเรียก api.anthropic.com
+// ตรงจาก browser ออกแล้ว เพราะไม่มีทางทำงานได้จริงจาก static frontend
+// (ไม่มี header, ติด CORS, และถ้าใส่ key ตรงนี้จะรั่วทันที)
+// LLM layer ที่ถูกต้องจะต่อผ่าน backend /analyze (explain:true) ในขั้นถัดไป
+function chatHTML(){
+  const learned = state.decisions.some(d=>d.outcome!=="pending");
+  const msgs = state.chat.map(m=>`<div class="msg ${m.role==='user'?'user':''}"><div class="bub ${m.role==='user'?'user':'ai'}">${esc(m.content)}</div></div>`).join("");
+  const empty = state.chat.length===0 ? `<div class="card" style="padding:20px">
+      <p style="font-size:13px;color:var(--sub);margin:0 0 12px">⚙️ โหมดสาธิต — คำตอบด้านล่างยังไม่ได้เชื่อมกับ AI จริง (LLM layer จะต่อในขั้นถัดไป)</p>
+      <p style="font-size:14px;font-weight:500;margin:0 0 12px">ลองถามคำถามที่คนมีประกันหลายฉบับเจอบ่อย:</p>
+      ${QUICK.map(q=>`<button class="qbtn" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
+    </div>` : "";
+  const loading = state.chatLoading ? `<div class="msg"><div class="bub ai" style="color:var(--sub)">กำลังไล่อ่านเงื่อนไขทั้ง 3 ฉบับ…</div></div>` : "";
+  const decideBar = (state.chat.length>0 && !state.chatLoading) ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+      <button class="chip" data-cdec="claim" style="border-color:var(--tealSoft);color:var(--teal)">✓ ตัดสินใจยื่นเคลม</button>
+      <button class="chip" data-cdec="buy_more" style="border-color:var(--tealSoft);color:var(--teal)">✓ ตัดสินใจซื้อเพิ่ม</button>
+      <button class="chip" data-cdec="no_action">ยังไม่ทำตอนนี้</button>
+    </div>` : "";
+  return `<div class="wrap" style="padding-top:24px;padding-bottom:24px;max-width:760px;display:flex;flex-direction:column;min-height:calc(100vh - 57px)">
+    <div>
+      <h1 style="font-size:20px">ผู้ช่วยประกัน + วางแผนการเงิน</h1>
+      <p class="muted" style="font-size:14px;margin:2px 0 0">รู้ทุกบรรทัดของทั้ง 3 ฉบับ · ตอบเรื่องเคลม ภาษี เกษียณ และการออมเพื่อลูก${learned?" · กำลังใช้ผลลัพธ์จริงจากการตัดสินใจก่อนหน้าประกอบคำแนะนำ ↻":""}</p>
+    </div>
+    <div style="flex:1;margin-top:16px">${empty}${msgs}${loading}</div>
+    ${decideBar}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input id="chat-input" placeholder="เช่น ปวดท้องต้องผ่าไส้ติ่ง เบิกได้เท่าไหร่?" style="flex:1;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);font-size:14px">
+      <button id="chat-send" class="btn-primary" style="width:auto;padding:12px 20px" ${state.chatLoading?'disabled':''}>ถาม</button>
+    </div>
+  </div>`;
+}
+function bindChat(){
+  document.querySelectorAll("[data-q]").forEach(b=> b.onclick = () => send(b.dataset.q));
+  document.querySelectorAll("[data-cdec]").forEach(b=> b.onclick = () => {
+    const t=b.dataset.cdec, last=state.chat[state.chat.length-2]?.content||"";
+    addDecision(t, t==="claim"?`ตัดสินใจยื่นเคลมหลังคุยกับ AI: "${last.slice(0,50)}…"`:t==="buy_more"?"ตัดสินใจซื้อเพิ่มหลังคุยกับ AI":"รับทราบข้อมูล ยังไม่ดำเนินการ");
+    b.textContent = "บันทึกแล้ว ↻ ไปกรอกผลจริงได้ที่แดชบอร์ด"; b.style.background="var(--mint)"; b.style.color="var(--teal)"; b.disabled=true;
+  });
+  const input = el("chat-input"), sendBtn = el("chat-send");
+  if(input) input.onkeydown = e => { if(e.key==="Enter") send(input.value); };
+  if(sendBtn) sendBtn.onclick = () => send(input.value);
+}
+async function send(q){
+  q = (q||"").trim();
+  if(!q || state.chatLoading) return;
+  state.chat.push({role:"user",content:q});
+  state.chatLoading = true; render();
+  await new Promise(r=>setTimeout(r,500));
+  state.chat.push({role:"assistant",content:mockAnswer(q)});
+  state.chatLoading = false; render();
+}
+// คำตอบจำลอง — ยังไม่ต่อ LLM จริง (ดูหมายเหตุด้านบน chatHTML)
+function mockAnswer(q){
+  const learned = state.decisions.some(d=>d.outcome!=="pending") ? "\n\n(↻ คำแนะนำนี้ปรับตามผลลัพธ์จริงที่คุณเคยบันทึกไว้ด้วย)" : "";
+  const has = (...kw)=>kw.some(k=>q.includes(k));
+  let body;
+  if(has("มอเตอร์ไซค์","อุบัติเหตุ","ล้ม","รถ")){
+    body="กรณีบาดเจ็บจากอุบัติเหตุ เบิกได้จาก 2 ฉบับ:\n1. เริ่มที่ เมืองไทย PA Plus (30,000 บ./ครั้ง) เป็นฉบับหลัก\n2. ถ้าเกินวงเงิน ใช้ประกันกลุ่ม KTC (20,000 บ./ครั้ง) สำรอง\nค่ารักษา 8,000 บาทอยู่ในวงเงินฉบับแรกสบาย ๆ เบิกฉบับเดียวพอ (เบิกซ้อนคิดตามค่าใช้จ่ายจริง ไม่ใช่ได้สองเด้ง)";
+  } else if(has("ลดหย่อน","ภาษี","สรรพากร")){
+    body="🔧 เรียกเครื่องมือ Tax_Calculator (คำนวณจริง):\nรายได้สุทธิ 800,000 บ. ภาษีปัจจุบัน ~75,000 บ.\nสิทธิ์ลดหย่อนที่เหลือ: ประกันชีวิต+สุขภาพรวมกันไม่เกิน 100,000 · บำนาญ 200,000 บ.\nหากใช้เต็ม ประหยัดภาษีเพิ่มได้ ~45,250 บ./ปี\nแนะนำ: ประกันบำนาญให้ผลลดหย่อนสูงสุดและช่วยวางแผนเกษียณไปในตัว";
+  } else if(has("เกษียณ","เกษียน","ออม")){
+    body="🔧 เรียกเครื่องมือ Retirement_Projector (ทบต้น 3%/ปี):\nอายุ 35→60 (25 ปี) ทุน 500,000 + ออมปีละ 60,000\n• เงินก้อนตอนเกษียณ ~3,234,000 บ.\n• กระแสเงินต่อปี (ถอน 4%) ~129,000 บ.\nถ้าเป้าหมาย 300,000/ปี → ยังขาดปีละ ~170,000 บ. ควรเพิ่มเงินสมทบหรือประกันบำนาญ";
+  } else if(has("ค่าเรียน","ค่าเล่าเรียน","ลูก","การศึกษา")){
+    body="🔧 เรียกเครื่องมือ Education_Planner:\nเป้าหมาย 2,000,000 บ. ใน 12 ปี (ผลตอบแทน 3%/ปี)\n• ต้องออม ~10,900 บ./เดือน (131,000 บ./ปี)\n• ระยะยาว อาจพิจารณา Unit-Linked เพื่อโอกาสผลตอบแทนสูงขึ้น (มีความเสี่ยง)";
+  } else if(has("ซื้อ","เพิ่ม","แนะนำ","สะสมทรัพย์","ตัวไหน")){
+    body="ช่องโหว่ที่ควรอุดก่อน เรียงตามความเร่งด่วน:\n1. โรคร้ายแรง (CI) — ตอนนี้ 0% ไม่มีเลย ควรมองแผนจ่ายเงินก้อนเมื่อตรวจพบ\n2. OPD — ถ้าไปหาหมอเกิน 4-5 ครั้ง/ปี การมี OPD rider จะคุ้ม\nอุบัติเหตุ/ชีวิตซ้ำซ้อนอยู่แล้ว ไม่ต้องซื้อเพิ่ม";
+  } else {
+    body="จากกรมธรรม์ 3 ฉบับ: IPD ครอบคลุมดี, อุบัติเหตุและชีวิตซ้ำซ้อน 2 ฉบับ, ยังขาดโรคร้ายแรงและ OPD อยากเจาะลึกหมวดไหน ลองถามเจาะจง เช่น 'เจ็บป่วยแบบนี้เบิกได้เท่าไหร่'";
+  }
+  return body + learned + "\n\n" + DISCLAIMER;
+}
+
+// ---------- boot ----------
+render();
+</script>
+</body>
+</html>
