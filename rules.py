@@ -79,6 +79,15 @@ class Policy:
     sum_insured: float      # ทุนประกัน / วงเงิน — หน่วยตามหมวด (ดู CATEGORY_UNITS)
     annual_premium: float = 0.0
 
+    # --- optional: ties together multiple category rows extracted from the
+    # SAME physical policy document (e.g. one PA policy that covers both
+    # pa_death and pa_medical). All rows from one document repeat the same
+    # annual_premium, so premium must be counted once per group, not once
+    # per row — see analyze_portfolio's total_premium aggregation below.
+    # Falls back to the row's own id (i.e. no dedup) when the caller
+    # doesn't know the source document, e.g. manually-entered policies. ---
+    policy_group_id: Optional[str] = None
+
 
 CATEGORY_UNITS = {
     "life":        "บาท (ทุนประกัน)",
@@ -314,12 +323,19 @@ def calc_tax_deduction(life_premium: float, health_premium: float,
 
 def analyze_portfolio(profile: Profile, policies: list[Policy]) -> dict:
     by_category: dict[str, float] = {}
-    total_premium = 0.0
     policies_by_category: dict[str, list[Policy]] = {}
+    # Premium is counted once per SOURCE POLICY DOCUMENT, not once per row —
+    # a single document can produce multiple category rows (e.g. one PA
+    # policy split into pa_death + pa_medical) that all repeat the same
+    # annual_premium. Group by policy_group_id (falls back to the row's own
+    # id when unknown) and take one premium value per group.
+    premium_by_group: dict[str, float] = {}
     for pol in policies:
         by_category[pol.category] = by_category.get(pol.category, 0) + pol.sum_insured
         policies_by_category.setdefault(pol.category, []).append(pol)
-        total_premium += pol.annual_premium
+        group_key = pol.policy_group_id or pol.id
+        premium_by_group.setdefault(group_key, pol.annual_premium)
+    total_premium = sum(premium_by_group.values())
 
     results = []
 

@@ -96,6 +96,10 @@ class PolicyIn(BaseModel):
     category: str
     sum_insured: float
     annual_premium: float = 0.0
+    # ties multiple rows back to the same source policy document so
+    # /analyze can count premium once per document, not once per row —
+    # see Policy.policy_group_id in rules.py for why this exists.
+    policy_group_id: Optional[str] = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -198,6 +202,11 @@ class ExtractedItem(BaseModel):
     annual_premium: Optional[float] = None
     raw_text: Optional[str] = None
     confidence: str = "low"
+    # all items from one /extract call came from the same uploaded document,
+    # so they share one group id — lets /analyze dedupe annual_premium when
+    # a single policy (e.g. PA) is split into multiple category rows
+    # (pa_death + pa_medical) that each repeat the same premium figure.
+    policy_group_id: Optional[str] = None
 
 
 class ExtractResponse(BaseModel):
@@ -220,10 +229,13 @@ async def extract_policy(file: UploadFile = File(...)):
         )
 
     raw = await file.read()
+    group_id = str(uuid.uuid4())  # one per uploaded document — see ExtractedItem.policy_group_id
 
     # --- image path: no text layer to read, send bytes straight to the LLM ---
     if file.content_type in IMAGE_MIME_TYPES:
         items = await _extract_image_with_llm(raw, file.content_type)
+        for item in items:
+            item.policy_group_id = group_id
         return ExtractResponse(
             filename=file.filename,
             text_extracted=True,
@@ -258,6 +270,8 @@ async def extract_policy(file: UploadFile = File(...)):
     print(text[:2000])
     print("===== END RAW PDF TEXT =====")
     items = await _extract_with_llm(text[:15_000])  # cap to keep prompt small/cheap
+    for item in items:
+        item.policy_group_id = group_id
 
     return ExtractResponse(
         filename=file.filename,
