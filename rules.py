@@ -324,18 +324,23 @@ def calc_tax_deduction(life_premium: float, health_premium: float,
 def analyze_portfolio(profile: Profile, policies: list[Policy]) -> dict:
     by_category: dict[str, float] = {}
     policies_by_category: dict[str, list[Policy]] = {}
-    # Premium is counted once per SOURCE POLICY DOCUMENT, not once per row —
-    # a single document can produce multiple category rows (e.g. one PA
-    # policy split into pa_death + pa_medical) that all repeat the same
-    # annual_premium. Group by policy_group_id (falls back to the row's own
-    # id when unknown) and take one premium value per group.
-    premium_by_group: dict[str, float] = {}
+    # Premium is counted once per DISTINCT premium figure within a source
+    # policy document, not once per row and not just the first row.
+    # A document can produce multiple category rows (e.g. one PA policy
+    # split into pa_death + pa_medical): if those rows repeat the exact
+    # same annual_premium, it's one premium figure printed twice — count
+    # once. But a main contract + rider (e.g. life 28,500 + IPD rider
+    # 18,200 on one เมืองไทย policy) have genuinely different premiums
+    # that both belong to the total — count each distinct value.
+    # Falls back to the row's own id when policy_group_id is unknown, so
+    # each ungrouped row forms its own singleton group (no dedup).
+    premiums_by_group: dict[str, set] = {}
     for pol in policies:
         by_category[pol.category] = by_category.get(pol.category, 0) + pol.sum_insured
         policies_by_category.setdefault(pol.category, []).append(pol)
         group_key = pol.policy_group_id or pol.id
-        premium_by_group.setdefault(group_key, pol.annual_premium)
-    total_premium = sum(premium_by_group.values())
+        premiums_by_group.setdefault(group_key, set()).add(pol.annual_premium)
+    total_premium = sum(sum(premiums) for premiums in premiums_by_group.values())
 
     results = []
 
