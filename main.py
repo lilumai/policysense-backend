@@ -31,6 +31,7 @@ import httpx
 import pdfplumber
 
 from rules import Profile, Policy, analyze_portfolio, calc_tax_deduction
+from knowledge import KNOWLEDGE_BASE
 
 load_dotenv()
 
@@ -38,7 +39,14 @@ STATIC_DIR = pathlib.Path(__file__).parent / "static"
 FRONTEND_FILE = STATIC_DIR / "index.html"
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+if not GEMINI_MODEL:
+    raise RuntimeError(
+        "GEMINI_MODEL ยังไม่ได้ตั้งค่าใน .env — ต้องระบุชื่อโมเดล Gemini ที่จะใช้ "
+        "(เช่น GEMINI_MODEL=gemini-3.1-flash-lite) ทุก endpoint ที่เรียก LLM "
+        "(/extract, /analyze, /chat) ใช้ค่านี้ร่วมกัน ไม่มี default เพราะ Google "
+        "เปลี่ยน free-tier quota ของแต่ละโมเดลบ่อย ต้องตั้งค่าให้ตรงกับ quota จริงของ API key"
+    )
 
 app = FastAPI(title="PolicySense API")
 
@@ -101,6 +109,24 @@ class TaxRequest(BaseModel):
     health_premium: float
     pension_premium: float
     gross_income: float
+
+
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+    analysis: dict          # raw output of /analyze — not schema-validated,
+                             # so this endpoint doesn't break every time
+                             # rules.py's output shape changes
+    profile: Optional[dict] = None
+    history: List[ChatMessage] = []
+
+
+class ChatResponse(BaseModel):
+    answer: str
 
 
 # ---------------------------------------------------------------------------
@@ -444,3 +470,116 @@ async def _explain_with_llm(rule_output: dict) -> Optional[str]:
         # Explanation is optional sugar — the deterministic JSON above
         # is already returned regardless of whether this succeeds.
         return None
+
+
+# ---------------------------------------------------------------------------
+# POST /chat — conversational explain-layer, same "LLM never computes"
+# guarantee as _explain_with_llm above, but interactive: the user can ask
+# follow-up questions about a specific /analyze result. Every number the
+# LLM is allowed to use is either already in `analysis` (the rule-engine
+# output the frontend got back from /analyze) or in KNOWLEDGE_BASE
+# (static reference facts, not per-user numbers). If a number isn't in
+# either, the prompt requires the model to say so instead of guessing.
+# ---------------------------------------------------------------------------
+
+CHAT_SYSTEM_PROMPT = """\
+คุณเป็นผู้ช่วยอธิบายผลวิเคราะห์พอร์ตประกันของ PolicySense ไม่ใช่ผู้ตัดสินใจ และไม่ใช่พนักงานขาย
+
+กฎเหล็ก:
+1. ห้ามคำนวณหรือสร้างตัวเลขใหม่เอง ตัวเลขทุกตัวที่คุณพูดต้องคัดลอกมาจาก <ผลวิเคราะห์> หรือ
+   <ความรู้อ้างอิง> ที่ให้มาเท่านั้น ห้ามคำนวณเลขใหม่แม้จะเป็นการบวก/ลบ/คูณ/หารง่ายๆจากตัวเลขที่มี
+   ถ้าจำเป็นต้องเทียบหรือรวมตัวเลข ให้ใช้เฉพาะผลลัพธ์ที่มีอยู่ใน context แล้ว ไม่ใช่คำนวณเอง
+2. ถ้าผู้ใช้ถามถึงตัวเลขที่ไม่มีอยู่ใน context ที่ให้มา → ตอบว่า "ระบบยังไม่มีข้อมูลส่วนนี้" ห้ามเดา
+3. ห้ามระบุชื่อผลิตภัณฑ์ประกันเฉพาะเจาะจงว่า "ควรซื้อตัวนี้" หรือชื่อบริษัทประกันใดบริษัทหนึ่ง
+   — พูดได้แค่ *ประเภท* ความคุ้มครอง (เช่น ประกันโรคร้ายแรงแบบเจอจ่ายจบ, ประกันชีวิตแบบชั่วระยะเวลา)
+4. ห้ามใช้ภาษาเร่งเร้าให้ซื้อ ห้ามใช้คำว่า "ต้องซื้อเดี๋ยวนี้" หรือสร้างความกลัว — เป็นผู้ให้ข้อมูล
+   ไม่ใช่พนักงานขาย
+
+หน้าที่:
+- แปลตัวเลขจาก rule engine ใน <ผลวิเคราะห์> เป็นภาษาที่คนทั่วไปเข้าใจ
+- อธิบาย "ทำไม" ช่องว่างนั้นสำคัญ โดยอ้างอิง <ความรู้อ้างอิง>
+- จัดลำดับความสำคัญว่าควรปิดช่องว่างไหนก่อน โดยพิจารณาช่วงวัย ภาระหนี้ และขนาดของ gap
+  ตามหลัก Life-Cycle ใน <ความรู้อ้างอิง>
+- เตือนเรื่อง affordability ถ้าเบี้ยรวมจะเกิน 10-15% ของรายได้ (ดูค่า affordability
+  ใน <ผลวิเคราะห์> ถ้ามี)
+
+รูปแบบการตอบ:
+- ภาษาไทย กระชับ ตรงคำถาม
+- อ้างตัวเลขเสมอเมื่อพูดถึงช่องว่าง เช่น "ทุนประกันชีวิตของคุณ 0 บาท เป้าหมาย 3,400,000 บาท
+  → ขาด 3,400,000 บาท"
+- ระบุที่มาสั้นๆ เมื่ออ้างความรู้จาก <ความรู้อ้างอิง> เช่น "ตามเกณฑ์ TFPA" หรือ "ตามเกณฑ์ New
+  Health Standard ของ TLAA"
+- ปิดท้ายด้วยการย้ำว่าเป็นการประเมินเบื้องต้นจากข้อมูลที่มี ไม่ใช่คำแนะนำการลงทุนหรือคำแนะนำทางการเงิน
+  โดยผู้เชี่ยวชาญที่มีใบอนุญาต
+"""
+
+
+def _build_chat_prompt(question: str, analysis: dict, profile: Optional[dict]) -> str:
+    parts = [
+        f"<ความรู้อ้างอิง>\n{KNOWLEDGE_BASE}\n</ความรู้อ้างอิง>",
+        f"<ผลวิเคราะห์>\n{json.dumps(analysis, ensure_ascii=False)}\n</ผลวิเคราะห์>",
+    ]
+    if profile is not None:
+        parts.append(f"<โปรไฟล์ผู้ใช้>\n{json.dumps(profile, ensure_ascii=False)}\n</โปรไฟล์ผู้ใช้>")
+    parts.append(f"คำถามของผู้ใช้: {question}")
+    return "\n\n".join(parts)
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน .env — ฟีเจอร์แชทต้องใช้ LLM",
+        )
+
+    # last 6 turns of history become prior conversation turns; the current
+    # question + full analysis/profile context becomes the final user turn
+    contents = [
+        {
+            "role": "model" if turn.role == "assistant" else "user",
+            "parts": [{"text": turn.content}],
+        }
+        for turn in req.history[-6:]
+    ]
+    contents.append({
+        "role": "user",
+        "parts": [{"text": _build_chat_prompt(req.question, req.analysis, req.profile)}],
+    })
+
+    payload = {
+        "systemInstruction": {"parts": [{"text": CHAT_SYSTEM_PROMPT}]},
+        "contents": contents,
+        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1000},
+    }
+    headers = {
+        "x-goog-api-key": GEMINI_API_KEY,
+        "content-type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+                headers=headers,
+                json=payload,
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"เรียก Gemini ไม่สำเร็จ: {e}")
+
+    if r.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini ตอบกลับผิดพลาด ({r.status_code}): {r.text}",
+        )
+
+    try:
+        data = r.json()
+        answer = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, ValueError) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"รูปแบบ response จาก Gemini ผิดปกติ: {e}",
+        )
+
+    return ChatResponse(answer=answer)
