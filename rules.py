@@ -28,6 +28,15 @@ them together would be meaningless.
 from dataclasses import dataclass
 from typing import Optional
 
+# Tolerance band for over-insurance detection.
+# TARGET_RULES produce point estimates derived from sources that report
+# ranges (e.g. general-tier room rates 5,500-8,200 THB; targeted-therapy
+# cost 2.7-4.6M THB). Flagging every case where current > target would
+# therefore produce false positives for users legitimately covered at the
+# upper end of the cited range. This band is a configurable default and
+# has NOT been empirically calibrated -- see Limitations.
+OVERLAP_TOLERANCE = 1.3
+
 
 # ---------------------------------------------------------------------------
 # 1. USER PROFILE — minimum required inputs, plus optional inputs that
@@ -348,7 +357,7 @@ def analyze_portfolio(profile: Profile, policies: list[Policy]) -> dict:
         target = rule["fn"](profile)
         current = by_category.get(cat, 0)
         gap = target - current
-        status = "gap" if gap > 0 else ("overlap" if current > target * 1.3 else "ok")
+        status = "gap" if gap > 0 else ("overlap" if current > target * OVERLAP_TOLERANCE else "ok")
 
         results.append({
             "category": cat,
