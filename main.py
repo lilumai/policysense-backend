@@ -266,9 +266,7 @@ async def extract_policy(file: UploadFile = File(...)):
             ),
         )
 
-    print("===== RAW PDF TEXT (first 2000 chars) =====")
-    print(text[:2000])
-    print("===== END RAW PDF TEXT =====")
+    print(f"extracted {len(text)} chars from PDF")
     items = await _extract_with_llm(text[:15_000])  # cap to keep prompt small/cheap
     for item in items:
         item.policy_group_id = group_id
@@ -305,9 +303,7 @@ async def _extract_with_llm(document_text: str) -> List[ExtractedItem]:
         # Defensive: strip stray markdown fences if the model adds them anyway
         if text.startswith("```"):
             text = text.strip("`").removeprefix("json").strip()
-        print("===== GEMINI RAW RESPONSE START =====")
-        print(text)
-        print("===== GEMINI RAW RESPONSE END =====")
+        print(f"gemini extract response: {len(text)} chars, status=ok")
         parsed = json.loads(text)
         return [ExtractedItem(**item) for item in parsed]
     except httpx.HTTPStatusError as e:
