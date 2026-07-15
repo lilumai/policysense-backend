@@ -144,6 +144,7 @@ def _ipd_room_target(p: Profile) -> float:
 
 def _ipd_lumpsum_target(p: Profile) -> float:
     # First Jobber vs 35+ tiers, per รู้ใจ/AIAplanner treatment-cost stats
+    # 2,000,000 / 7,500,000: internal estimate, ไม่มี trail ผูกกับสถิติเฉพาะ
     return 2_000_000.0 if p.age < 35 else 7_500_000.0
 
 
@@ -185,7 +186,7 @@ def _education_target(p: Profile) -> Optional[float]:
 TARGET_RULES = {
     "life": {
         "fn": lambda p: _life_target(p)[0],
-        "tier": "regulatory_backed",
+        "tier": "industry_data",
         "source": "สมาคมนักวางแผนการเงินไทย (TFPA) + ตลาดหลักทรัพย์ฯ (SET): "
                    "max(รายได้ต่อปี×5, Needs Approach: หนี้สิน+ค่าใช้จ่ายครอบครัว 5 ปี"
                    "+ทุนการศึกษาบุตร−สินทรัพย์สะสม). Rule B คำนวณเฉพาะเมื่อกรอกข้อมูลเพิ่มเติม",
@@ -211,24 +212,26 @@ TARGET_RULES = {
     "ci": {
         "fn": lambda p: _ci_target(p, _ipd_lumpsum_target(p))[0],
         "tier": "industry_data",
-        "source": "ค่ารักษาต่อเนื่อง/ยามุ่งเป้า (เฉลี่ย 2.7–4.6 ล้านบ.) + ชดเชยรายได้ 12 เดือน. "
-                   "หากมีสถานะ copay ตาม New Health Standard (TLAA) จะบวกเพิ่ม 30% ของวงเงิน IPD "
-                   "— หมายเหตุ: ระบบใช้การกรอกสถานะเอง แทนการติดตามประวัติเคลมจริง (ยังไม่มี DB)",
+        "source": "ค่ารักษาต่อเนื่องระดับกลาง (midpoint ของช่วง 1.5-3 ล้านบาท) "
+                   "+ ชดเชยรายได้ 12 เดือน. หมายเหตุ: ตัวเลข 2.7-4.6 ล้านบาทใน knowledge.py "
+                   "เป็นข้อมูลอ้างอิงกรณีร้ายแรง (targeted therapy) ซึ่งสูงกว่าเกณฑ์ default นี้ "
+                   "— ยังไม่ได้ reconcile เป็นค่าเดียวกัน",
         "label": "เงินก้อนโรคร้ายแรง (CI)",
         "unit": CATEGORY_UNITS["ci"],
     },
     "pa_medical": {
         "fn": _pa_medical_target,
-        "tier": "industry_data",
-        "source": "Underwriting Guideline ของบริษัทประกันวินาศภัยในไทย — วงเงินค่ารักษาอุบัติเหตุ/ครั้ง",
+        "tier": "heuristic",
+        "source": "Heuristic default — ยังไม่มีเอกสารอ้างอิงที่ระบุแหล่งที่มาชัดเจน "
+                   "(สูตร: วงเงิน 40,000 บาทต่อครั้ง เป็นค่าประมาณการภายใน)",
         "label": "ค่ารักษาอุบัติเหตุต่อครั้ง (PA)",
         "unit": CATEGORY_UNITS["pa_medical"],
     },
     "pa_death": {
         "fn": _pa_death_target,
-        "tier": "industry_data",
-        "source": "Underwriting Guideline ของบริษัทประกันวินาศภัยในไทย — ทุนเสียชีวิต/ทุพพลภาพจากอุบัติเหตุ "
-                   "= รายได้ต่อปี × 2 เท่า",
+        "tier": "heuristic",
+        "source": "Heuristic default — ยังไม่มีเอกสารอ้างอิงที่ระบุแหล่งที่มาชัดเจน "
+                   "(สูตร: รายได้ต่อปี × 2 เป็นค่าประมาณการภายใน)",
         "label": "ทุนเสียชีวิตจากอุบัติเหตุ (PA)",
         "unit": CATEGORY_UNITS["pa_death"],
     },
